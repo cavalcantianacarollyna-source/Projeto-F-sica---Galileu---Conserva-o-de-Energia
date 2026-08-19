@@ -12,9 +12,6 @@ O projeto aborda a transformação da energia potencial gravitacional em energia
 O objetivo do projeto é explicar a conservação de energia de forma visual e experimental, relacionando os conceitos físicos a situações que permitem observar a transformação da energia durante o movimento.
 O projeto será desenvolvido por meio de pesquisa, elaboração de roteiro, produção do vídeo e revisão do conteúdo. As situações apresentadas serão utilizadas para representar visualmente as transformações de energia e facilitar a compreensão dos conceitos abordados.
 
-Project Board
-O link será adicionado posteriormente.
-
 Vídeo final
 O link do vídeo será adicionado posteriormente.
 

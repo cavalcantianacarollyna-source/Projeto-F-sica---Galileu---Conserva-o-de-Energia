@@ -70,7 +70,7 @@ Assim, a energia não desaparece. Ela apenas é transferida ou transformada.
 
 Cálculos
 Para a demonstração, consideramos uma bola com massa de 250 kg, aceleração da gravidade de 10 m/s² e altura de 10 m, desprezando a resistência do ar.
-Anexar cálculos em LaTex 
+[Ver cálculos em PDF](https://github.com/user-attachments/files/31447522/Revisao_dos_Calculos_Galilei.pdf)
 
 Galileu Galilei — contexto histórico
 O grupo escolheu o nome Galileu Galilei por conta da importância de Galileu para a Física Experimental e por suas contribuições para o estudo dos movimentos.

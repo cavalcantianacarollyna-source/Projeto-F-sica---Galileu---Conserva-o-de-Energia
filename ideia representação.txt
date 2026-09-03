@@ -1,0 +1,36 @@
+Dados a serem utilizados na representação:
+Massa da bola = 250
+gravidade = 10m/s²
+altura = 10m
+sem resistência do ar
+
+ideia da primeira representação:
+Mostrar a troca de energia potencial gravitacional para energia cinética sem resistência alguma, fazendo o movimento ser continuo e apontando os pontos de troca de energia mais predominante
+Citando no movimento de pêndulo que do ponto mais alto ao mais fundo, a bola em livre movimento, haverá o momento em que a energia cinética chegará a 0 e a energia gravitacional no seu máximo e vice versa
+
+ideia da segunda representação:
+manter a ideia de representar o movimento do pêndulo da bola do guindaste mas com resistências, mostrando a dissipação da energia mecânica e a visualização do movimento de pendulo cada vez mais fraco até a parada total, onde apenas a gravidade irá estar presente puxando para baixo a bola a 10 metros de altura
+
+terceira representação e principal:
+a representação mais importante e a primeira ideia, representar uma colisão da bola do guindaste em um muro, apontando a quantidade em joules da energia potencial gravitacional, cinética  e mecânica, a velocidade imediata antes do impacto e a energia cinética também antes do impacto
+no momento da colisão, mostrar a energia transferida para o muro, considerada 80% da energia cinética
+
+resistência do ar será desprezada
+roteiro considera a conservação da energia mecânica durante a queda
+Bola no ponto mais alto: Energia cinética é zero pois a bola se encontra em repouso
+medida de energia = Joules
+
+
+
+
+formulário 
+EPG: Epg = mgh
+Ec: Ec = 1/2.mv²
+Velocidade: res. ar despresada, logo, energia se conserva
+velocidade²: Ep = Ec
+velocidade³: mgh = 1/2.mv2
+velocidade4: v² = 2gh
+Em = Soma das energias potencial e cinética : Em = Ep + Ec
+
+
+

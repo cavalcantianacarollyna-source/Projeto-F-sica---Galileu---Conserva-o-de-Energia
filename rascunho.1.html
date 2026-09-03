@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conservação de energia - bola de guindaste</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f5f4f0;
+    color: #222220;
+    padding: 24px 16px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 16px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tabs button {
+    flex: 1; min-width: 150px; padding: 10px 8px; font-size: 14px;
+    border: 1px solid #d3d1c7; border-radius: 8px; background: #fff;
+    color: #222220; cursor: pointer;
+  }
+  .tabs button.active { background: #e6f1fb; border-color: #378ADD; color: #0c447c; font-weight: 600; }
+  .layout { display: flex; gap: 16px; flex-wrap: wrap; }
+  .sceneCol { flex: 2; min-width: 320px; }
+  .panelCol { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; }
+  svg { width: 100%; height: auto; background: #ffffff; border-radius: 8px; border: 1px solid #e5e3da; }
+  .controls { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  .controls button {
+    padding: 8px 14px; font-size: 14px; border: 1px solid #d3d1c7;
+    border-radius: 8px; background: #fff; cursor: pointer; color: #222220;
+  }
+  .card { background: #fff; border-radius: 8px; padding: 12px 16px; border: 1px solid #e5e3da; }
+  .card .label { font-size: 13px; color: #666460; margin: 0; }
+  .card .value { font-size: 20px; font-weight: 600; margin: 2px 0 0; }
+  .barTrack { width: 100%; height: 8px; background: #eeece5; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .barFill { height: 100%; border-radius: 4px; transition: width 0.1s linear; }
+  .pct { font-size: 12px; color: #666460; margin: 4px 0 0; }
+  .impactCard { border-radius: 8px; padding: 12px 16px; color: #4A1B0C; }
+  .impactCard.wall { background: #F5C4B3; }
+  .impactCard.other { background: #FAC775; color: #412402; }
+  .impactCard p.label { font-size: 13px; margin: 0; opacity: 0.85; }
+  .impactCard p.value { font-size: 20px; font-weight: 600; margin: 2px 0 0; }
+  #noteText { font-size: 13px; color: #55534d; line-height: 1.6; margin-top: 16px; }
+  @keyframes shakeWall {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+  }
+  @keyframes waveOut {
+    0% { opacity: 0.8; transform: scale(0.3); }
+    100% { opacity: 0; transform: scale(1.8); }
+  }
+  .shaking { animation: shakeWall 0.4s ease-in-out 3; transform-origin: center; }
+  .wave { animation: waveOut 0.9s ease-out infinite; transform-origin: center; }
+</style>
+</head>
+<body>
+
+<h1>Conservação de energia mecânica - bola de guindaste (rascunho)</h1>
+
+<div class="tabs">
+  <button id="tabBtn0" onclick="setTab(0)">1. Sem resistência</button>
+  <button id="tabBtn1" onclick="setTab(1)">2. Com resistência</button>
+  <button id="tabBtn2" onclick="setTab(2)">3. Colisão (principal)</button>
+</div>
+
+<div class="layout">
+  <div class="sceneCol">
+    <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Simulação da bola de guindaste</title>
+      <desc>Bola de guindaste de 250 quilos presa a um cabo, oscilando como um pêndulo à esquerda, colidindo com um muro de tijolos à direita.</desc>
+
+      <line x1="10" y1="260" x2="490" y2="260" stroke="#c9c7bd" stroke-width="1"/>
+      <rect x="20" y="60" width="14" height="200" fill="#9c9a92"/>
+      <rect x="20" y="46" width="164" height="10" rx="3" fill="#9c9a92"/>
+      <circle cx="180" cy="55" r="4" fill="#5f5e5a"/>
+
+      <g id="wallGroup" opacity="0">
+        <rect x="210" y="170" width="30" height="20" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="242" y="170" width="30" height="20" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="210" y="192" width="30" height="20" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="242" y="192" width="30" height="20" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="210" y="214" width="30" height="20" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="242" y="214" width="30" height="20" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="210" y="236" width="30" height="24" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+        <rect x="242" y="236" width="30" height="24" rx="2" fill="#F0997B" stroke="#993C1D" stroke-width="0.5"/>
+      </g>
+
+      <g id="impactWaves" opacity="0">
+        <circle cx="210" cy="195" r="20" fill="none" stroke="#EF9F27" stroke-width="1.5" class="wave" style="animation-delay:0s"/>
+        <circle cx="210" cy="195" r="20" fill="none" stroke="#EF9F27" stroke-width="1.5" class="wave" style="animation-delay:0.25s"/>
+        <circle cx="210" cy="195" r="20" fill="none" stroke="#EF9F27" stroke-width="1.5" class="wave" style="animation-delay:0.5s"/>
+      </g>
+
+      <line id="cable" x1="180" y1="55" x2="40" y2="55" stroke="#444441" stroke-width="2"/>
+
+      <g id="ballGroup">
+        <circle id="ball" cx="40" cy="55" r="26" fill="#5f5e5a" stroke="#2c2c2a" stroke-width="1"/>
+        <text id="ballLabel" x="40" y="55" text-anchor="middle" dominant-baseline="central"
+              font-size="12" fill="#f1efe8" font-family="Arial, Helvetica, sans-serif">250 kg</text>
+      </g>
+
+      <text id="hLabel" x="180" y="30" text-anchor="middle" font-size="12" fill="#55534d"
+            font-family="Arial, Helvetica, sans-serif">h = 10 m</text>
+    </svg>
+
+    <div class="controls">
+      <button id="playBtn" onclick="togglePlay()">Pausar</button>
+      <button onclick="resetSim()">Reiniciar</button>
+    </div>
+  </div>
+
+  <div class="panelCol">
+    <div class="card" id="cardEp">
+      <p class="label">Energia potencial (Ep)</p>
+      <p class="value" id="epVal">25000 J</p>
+      <div id="epBarWrap" style="display:none;">
+        <div class="barTrack"><div id="epBarFill" class="barFill" style="width:100%;background:#EF9F27;"></div></div>
+        <p class="pct" id="epPct">100% de 25000 J</p>
+      </div>
+    </div>
+    <div class="card" id="cardEc">
+      <p class="label">Energia cinética (Ec)</p>
+      <p class="value" id="ecVal">0 J</p>
+      <div id="ecBarWrap" style="display:none;">
+        <div class="barTrack"><div id="ecBarFill" class="barFill" style="width:0%;background:#378ADD;"></div></div>
+        <p class="pct" id="ecPct">0% de 25000 J</p>
+      </div>
+    </div>
+    <div class="card" id="cardEm">
+      <p class="label">Energia mecânica (Em)</p>
+      <p class="value" id="emVal">25000 J</p>
+      <div id="emBarWrap" style="display:none;">
+        <div class="barTrack"><div id="emBarFill" class="barFill" style="width:100%;background:#1D9E75;"></div></div>
+        <p class="pct" id="emPct">100% de 25000 J</p>
+      </div>
+    </div>
+    <div class="card">
+      <p class="label">Velocidade (v)</p>
+      <p class="value" id="vVal">0 m/s</p>
+    </div>
+
+    <div id="impactBreakdown" style="opacity:0;transition:opacity 0.3s;display:flex;flex-direction:column;gap:8px;">
+      <div class="impactCard wall">
+        <p class="label">Transferida ao muro (80%)</p>
+        <p class="value" id="wallVal">20000 J</p>
+      </div>
+      <div class="impactCard other">
+        <p class="label">Outras formas: som, calor, deformação (20%)</p>
+        <p class="value" id="otherVal">5000 J</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p id="noteText">Sem resistência do ar, a energia mecânica (Em = Ep + Ec) permanece constante durante toda a oscilação. As barras mostram a participação de cada energia, com 25000 J correspondendo a 100%.</p>
+
+<script>
+const m = 250, g = 10, L = 10, EmTotal = m * g * L;
+const pivotX = 180, pivotY = 55, Lpx = 140;
+let tab = 0, playing = true, t0 = performance.now();
+let collisionPhase = 0;
+
+function setTab(i) {
+  tab = i; t0 = performance.now(); collisionPhase = 0;
+  [0, 1, 2].forEach(k => document.getElementById('tabBtn' + k).classList.toggle('active', k === i));
+  document.getElementById('wallGroup').style.opacity = i === 2 ? '1' : '0';
+  document.getElementById('wallGroup').classList.remove('shaking');
+  document.getElementById('impactWaves').style.opacity = '0';
+  document.getElementById('impactBreakdown').style.opacity = '0';
+  document.getElementById('cardEp').style.display = 'block';
+  document.getElementById('cardEc').style.display = 'block';
+  document.getElementById('epVal').style.display = i === 0 ? 'none' : 'block';
+  document.getElementById('ecVal').style.display = i === 0 ? 'none' : 'block';
+  document.getElementById('epBarWrap').style.display = i === 0 ? 'block' : 'none';
+  document.getElementById('ecBarWrap').style.display = i === 0 ? 'block' : 'none';
+  document.getElementById('emBarWrap').style.display = i === 1 ? 'block' : 'none';
+  const notes = [
+    'Sem resistência do ar, a energia mecânica (Em = Ep + Ec) permanece constante durante toda a oscilação. As barras mostram a participação de cada energia, com 25000 J correspondendo a 100%.',
+    'Com resistência, a energia mecânica se dissipa lentamente a cada oscilação (barra ao lado de Em). O pêndulo perde amplitude aos poucos até parar, restando apenas a força da gravidade puxando a bola para baixo, mesmo com Em próxima de 0.',
+    'A bola cai do ponto mais alto (h = 10 m, Ec = 0) até o momento do impacto, onde toda a energia potencial virou cinética.'
+  ];
+  document.getElementById('noteText').textContent = notes[i];
+  document.getElementById('hLabel').textContent = i === 2 ? 'antes do impacto' : 'h = 10 m';
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? 'Pausar' : 'Continuar';
+}
+function resetSim() { t0 = performance.now(); collisionPhase = 0; }
+
+function updateScene(theta, Ep, Ec, Em, v) {
+  const bx = pivotX + Lpx * Math.sin(theta);
+  const by = pivotY + Lpx * Math.cos(theta);
+  document.getElementById('ball').setAttribute('cx', bx);
+  document.getElementById('ball').setAttribute('cy', by);
+  document.getElementById('ballLabel').setAttribute('x', bx);
+  document.getElementById('ballLabel').setAttribute('y', by);
+  document.getElementById('cable').setAttribute('x2', bx);
+  document.getElementById('cable').setAttribute('y2', by);
+  document.getElementById('epVal').textContent = Math.round(Ep).toLocaleString('pt-BR') + ' J';
+  document.getElementById('ecVal').textContent = Math.round(Ec).toLocaleString('pt-BR') + ' J';
+  document.getElementById('emVal').textContent = Math.round(Em).toLocaleString('pt-BR') + ' J';
+  document.getElementById('vVal').textContent = v.toFixed(1) + ' m/s';
+  const epPct = Math.max(0, Math.min(100, Ep / 25000 * 100));
+  const ecPct = Math.max(0, Math.min(100, Ec / 25000 * 100));
+  const emPct = Math.max(0, Math.min(100, Em / 25000 * 100));
+  document.getElementById('epBarFill').style.width = epPct + '%';
+  document.getElementById('ecBarFill').style.width = ecPct + '%';
+  document.getElementById('emBarFill').style.width = emPct + '%';
+  document.getElementById('epPct').textContent = Math.round(epPct) + '% de 25000 J';
+  document.getElementById('ecPct').textContent = Math.round(ecPct) + '% de 25000 J';
+  document.getElementById('emPct').textContent = Math.round(emPct) + '% de 25000 J';
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!playing) return;
+  const t = (now - t0) / 1000;
+
+  if (tab === 0) {
+    const theta = (Math.PI / 2) * Math.cos(1.0 * t);
+    const h = L * (1 - Math.cos(theta));
+    const Ep = m * g * h, Ec = Math.max(0, EmTotal - Ep), v = Math.sqrt(2 * Ec / m);
+    updateScene(theta, Ep, Ec, EmTotal, v);
+  } else if (tab === 1) {
+    const decay = Math.exp(-0.05 * t);
+    if (decay < 0.03) { t0 = now; }
+    const theta = (Math.PI / 2) * decay * Math.cos(1.0 * t);
+    const EpReal = m * g * L * (1 - Math.cos(theta));
+    const EmCurrent = EmTotal * decay * decay;
+    const EcCalc = Math.max(0, EmCurrent - EpReal);
+    const vReal = Math.sqrt(2 * EcCalc / m);
+    updateScene(theta, EpReal, EcCalc, EmCurrent, vReal);
+  } else if (tab === 2) {
+    const T = 2.0;
+    if (collisionPhase === 0) {
+      const prog = Math.min(1, t / T);
+      const eased = 1 - (1 - prog) * (1 - prog);
+      const theta = -(Math.PI / 2) * (1 - eased);
+      const h = L * (1 - Math.cos(theta));
+      const Ep = m * g * h, Ec = Math.max(0, EmTotal - Ep), v = Math.sqrt(2 * Ec / m);
+      updateScene(theta, Ep, Ec, EmTotal, v);
+      if (prog >= 1) {
+        collisionPhase = 1; t0 = now;
+        document.getElementById('wallGroup').classList.add('shaking');
+        document.getElementById('impactWaves').style.opacity = '1';
+        document.getElementById('impactBreakdown').style.opacity = '1';
+        document.getElementById('cardEp').style.display = 'none';
+        document.getElementById('cardEc').style.display = 'none';
+        const vImp = Math.sqrt(2 * EmTotal / m);
+        document.getElementById('noteText').textContent =
+          'Colisão! Imediatamente antes do impacto: v = ' + vImp.toFixed(1) + ' m/s, Ec = ' + Math.round(EmTotal).toLocaleString('pt-BR') +
+          ' J. No choque, 80% dessa energia cinética é transferida ao muro (empurrando e deformando os blocos) e os 20% restantes se dispersam em outras formas: som, calor e deformação da própria bola.';
+      }
+    } else if (collisionPhase === 1) {
+      updateScene(0, 0, EmTotal, EmTotal, Math.sqrt(2 * EmTotal / m));
+      if ((now - t0) > 2800) { collisionPhase = 2; t0 = now; document.getElementById('wallGroup').classList.remove('shaking'); }
+    } else {
+      if ((now - t0) > 800) { setTab(2); }
+    }
+  }
+}
+setTab(0);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

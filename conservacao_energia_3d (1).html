@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conservação de energia 3D - bola de guindaste</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f5f4f0;
+    color: #222220;
+    padding: 24px 16px;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 16px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tabs button {
+    flex: 1; min-width: 130px; padding: 10px 8px; font-size: 13px;
+    border: 1px solid #d3d1c7; border-radius: 8px; background: #fff;
+    color: #222220; cursor: pointer;
+  }
+  .tabs button.active { background: #e6f1fb; border-color: #378ADD; color: #0c447c; font-weight: 600; }
+  .layout { display: flex; gap: 16px; flex-wrap: wrap; }
+  .sceneCol { flex: 2; min-width: 320px; }
+  .panelCol { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; }
+  .canvasWrap { position: relative; width: 100%; height: 340px; border-radius: 8px; overflow: hidden; background: #eeece5; border: 1px solid #e5e3da; }
+  #three-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  .hint { font-size: 12px; color: #666460; text-align: center; margin: 6px 0 0; }
+  .controls { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  .controls button {
+    padding: 8px 14px; font-size: 14px; border: 1px solid #d3d1c7;
+    border-radius: 8px; background: #fff; cursor: pointer; color: #222220;
+  }
+  .card { background: #fff; border-radius: 8px; padding: 12px 16px; border: 1px solid #e5e3da; }
+  .card .label { font-size: 13px; color: #666460; margin: 0; }
+  .card .value { font-size: 20px; font-weight: 600; margin: 2px 0 0; }
+  .barTrack { width: 100%; height: 8px; background: #eeece5; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .barFill { height: 100%; border-radius: 4px; transition: width 0.1s linear; }
+  .pct { font-size: 12px; color: #666460; margin: 4px 0 0; }
+  .impactCard { border-radius: 8px; padding: 12px 16px; color: #4A1B0C; }
+  .impactCard.wall { background: #F5C4B3; }
+  .impactCard.other { background: #FAC775; color: #412402; }
+  .impactCard p.label { font-size: 13px; margin: 0; opacity: 0.85; }
+  .impactCard p.value { font-size: 20px; font-weight: 600; margin: 2px 0 0; }
+  #noteText { font-size: 13px; color: #55534d; line-height: 1.6; margin-top: 16px; }
+  .formCard { background: #fff; border-radius: 8px; padding: 12px 16px; border: 1px solid #e5e3da; }
+  .formName { font-size: 13px; color: #666460; margin: 0 0 6px; }
+  .formExpr { font-family: "Courier New", monospace; font-size: 14px; color: #222220; margin: 0 0 4px; }
+  .formSub { font-family: "Courier New", monospace; font-size: 14px; color: #666460; margin: 0 0 4px; }
+  .formResult { font-size: 16px; font-weight: 600; color: #222220; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+
+<h1>Conservação de energia mecânica em 3D - canteiro de obras (rascunho)</h1>
+
+<div class="tabs">
+  <button id="tabBtn0" onclick="setTab(0)">1. Sem resistência</button>
+  <button id="tabBtn1" onclick="setTab(1)">2. Com resistência</button>
+  <button id="tabBtn2" onclick="setTab(2)">3. Colisão</button>
+  <button id="tabBtn3" onclick="setTab(3)">4. Fórmulário</button>
+  <button id="tabBtn4" onclick="setTab(4)">5. Zoom cinematográfico</button>
+</div>
+
+<div class="layout" id="layoutMain">
+  <div class="sceneCol">
+    <div class="canvasWrap"><canvas id="three-canvas"></canvas></div>
+    <p class="hint" id="hint">Arraste na cena para girar a câmera</p>
+    <div class="controls">
+      <button id="playBtn" onclick="togglePlay()">Pausar</button>
+      <button onclick="resetSim()">Reiniciar</button>
+    </div>
+  </div>
+
+  <div class="panelCol">
+    <div class="card" id="cardEp">
+      <p class="label">Energia potencial (Ep)</p>
+      <p class="value" id="epVal">25000 J</p>
+      <div id="epBarWrap" style="display:none;">
+        <div class="barTrack"><div id="epBarFill" class="barFill" style="width:100%;background:#EF9F27;"></div></div>
+        <p class="pct" id="epPct">100% de 25000 J</p>
+      </div>
+    </div>
+    <div class="card" id="cardEc">
+      <p class="label">Energia cinética (Ec)</p>
+      <p class="value" id="ecVal">0 J</p>
+      <div id="ecBarWrap" style="display:none;">
+        <div class="barTrack"><div id="ecBarFill" class="barFill" style="width:0%;background:#378ADD;"></div></div>
+        <p class="pct" id="ecPct">0% de 25000 J</p>
+      </div>
+    </div>
+    <div class="card" id="cardEm">
+      <p class="label">Energia mecânica (Em)</p>
+      <p class="value" id="emVal">25000 J</p>
+      <div id="emBarWrap" style="display:none;">
+        <div class="barTrack"><div id="emBarFill" class="barFill" style="width:100%;background:#1D9E75;"></div></div>
+        <p class="pct" id="emPct">100% de 25000 J</p>
+      </div>
+    </div>
+    <div class="card">
+      <p class="label">Velocidade (v)</p>
+      <p class="value" id="vVal">0 m/s</p>
+    </div>
+    <div id="impactBreakdown" style="opacity:0;transition:opacity 0.3s;display:flex;flex-direction:column;gap:8px;">
+      <div class="impactCard wall">
+        <p class="label">Transferida ao muro (80%)</p>
+        <p class="value" id="wallVal">20000 J</p>
+      </div>
+      <div class="impactCard other">
+        <p class="label">Outras formas: som, calor, deformação (20%)</p>
+        <p class="value" id="otherVal">5000 J</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="formulasPanel" style="display:none;">
+  <p style="font-size:14px;font-weight:600;margin:0 0 8px;">Dados base</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:1.25rem;">
+    <div class="formCard"><p class="formName">Massa da bola (m)</p><p class="formResult">250 kg</p></div>
+    <div class="formCard"><p class="formName">Altura inicial (h)</p><p class="formResult">10 m</p></div>
+    <div class="formCard"><p class="formName">Gravidade (g)</p><p class="formResult">10 m/s²</p></div>
+  </div>
+  <p style="font-size:14px;font-weight:600;margin:0 0 8px;">Fórmulas e cálculos (sem resistência do ar)</p>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div class="formCard">
+      <p class="formName">No ponto mais alto</p>
+      <p class="formExpr">v = 0 → Ec = 0 J</p>
+      <p class="formExpr">Ep = m · g · h</p>
+      <p class="formSub">Ep = 250 × 10 × 10</p>
+      <p class="formResult">Ep = 25.000 J → Em = Ep + Ec = 25.000 J</p>
+    </div>
+    <div class="formCard">
+      <p class="formName">Velocidade imediatamente antes do impacto</p>
+      <p class="formExpr">Ep = Ec  →  m·g·h = ½·m·v²</p>
+      <p class="formSub">Cancelando a massa dos dois lados:</p>
+      <p class="formExpr">v² = 2 · g · h</p>
+      <p class="formSub">v² = 2 × 10 × 10 = 200</p>
+      <p class="formResult">v ≈ 14,14 m/s</p>
+    </div>
+    <div class="formCard">
+      <p class="formName">Energia cinética antes do impacto</p>
+      <p class="formExpr">Ec = ½ · m · v²</p>
+      <p class="formSub">Ec = ½ × 250 × (14,14)² = ½ × 250 × 200</p>
+      <p class="formResult">Ec = 25.000 J (Ep ≈ 0 J, pois a altura ≈ 0)</p>
+    </div>
+    <div class="formCard">
+      <p class="formName">Energia mecânica (constante durante a queda)</p>
+      <p class="formExpr">Em = Ep + Ec</p>
+      <p class="formSub">No topo: 25.000 + 0 · Antes do impacto: 0 + 25.000</p>
+      <p class="formResult">Em = 25.000 J nos dois momentos</p>
+    </div>
+    <div class="formCard">
+      <p class="formName">Energia transferida ao muro na colisão (80%)</p>
+      <p class="formExpr">Emuro = 0,8 · Ec</p>
+      <p class="formSub">Emuro = 0,8 × 25.000</p>
+      <p class="formResult">Emuro = 20.000 J</p>
+    </div>
+    <div class="formCard">
+      <p class="formName">Outras formas: som, calor, deformação (20%)</p>
+      <p class="formExpr">Eoutras = 0,2 · Ec</p>
+      <p class="formSub">Eoutras = 0,2 × 25.000</p>
+      <p class="formResult">Eoutras = 5.000 J</p>
+    </div>
+  </div>
+</div>
+
+<p id="noteText">Sem resistência do ar, a energia mecânica (Em = Ep + Ec) permanece constante durante toda a oscilação.</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const m = 250, g = 10, L = 10, EmTotal = m*g*L;
+const pivotX = 0, pivotY = 12, pivotZ = 0;
+let tab = 0, playing = true, t0 = performance.now();
+let collisionPhase = 0;
+
+const container = document.querySelector('#three-canvas').parentElement;
+const canvas = document.getElementById('three-canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xeeece5);
+const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.setSize(container.clientWidth, container.clientHeight);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const dl = new THREE.DirectionalLight(0xffffff, 0.6);
+dl.position.set(12, 24, 14);
+scene.add(dl);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(70,70), new THREE.MeshStandardMaterial({color:0xdfddd2}));
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+ground.material.color.set(0xc2a876);
+
+function makeBuilding(x, width, depth, height, color){
+  const bMat = new THREE.MeshStandardMaterial({color});
+  const b = new THREE.Mesh(new THREE.BoxGeometry(width,height,depth), bMat);
+  b.position.set(x, height/2, -16);
+  scene.add(b);
+  const winMat = new THREE.MeshStandardMaterial({color:0xbfe0f2, emissive:0x274a5c, emissiveIntensity:0.35});
+  const cols = Math.max(2, Math.floor(width/1.2));
+  const rows = Math.max(2, Math.floor(height/1.4));
+  for(let c=0;c<cols;c++){
+    for(let r=0;r<rows;r++){
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.8), winMat);
+      win.position.set(x - width/2 + 0.9 + c*1.15, 1.1 + r*1.35, -16 + depth/2 + 0.02);
+      scene.add(win);
+    }
+  }
+}
+makeBuilding(-8, 5, 4, 10, 0xb9b4a8);
+makeBuilding(1, 6, 4, 15, 0xa9a79c);
+makeBuilding(10, 4.5, 4, 8, 0xc2bdae);
+makeBuilding(-16, 4, 4, 12, 0xb2ada0);
+
+const structMat = new THREE.MeshStandardMaterial({color:0xf2c230});
+const darkMat = new THREE.MeshStandardMaterial({color:0x2c2c2a});
+
+const mastBaseX = -13, mastHalf = 0.5, mastTop = 14;
+const legOffsets = [[-mastHalf,-mastHalf],[mastHalf,-mastHalf],[mastHalf,mastHalf],[-mastHalf,mastHalf]];
+legOffsets.forEach(o=>{
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,mastTop,8), structMat);
+  leg.position.set(mastBaseX+o[0], mastTop/2, o[1]);
+  scene.add(leg);
+});
+const mastLevels = 7;
+for(let i=0;i<=mastLevels;i++){
+  const y = i*(mastTop/mastLevels);
+  for(let s=0;s<4;s++){
+    const a = legOffsets[s], b = legOffsets[(s+1)%4];
+    const dx=b[0]-a[0], dz=b[1]-a[1], len=Math.sqrt(dx*dx+dz*dz);
+    const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,len,6), structMat);
+    brace.position.set(mastBaseX+(a[0]+b[0])/2, y, (a[1]+b[1])/2);
+    brace.rotation.z = Math.PI/2;
+    brace.rotation.y = Math.atan2(dz,dx);
+    scene.add(brace);
+  }
+  if(i<mastLevels){
+    const y2 = (i+1)*(mastTop/mastLevels);
+    [[legOffsets[0],legOffsets[1]],[legOffsets[2],legOffsets[3]]].forEach(pair=>{
+      const a=pair[0], b=pair[1];
+      const p1 = new THREE.Vector3(mastBaseX+a[0], y, a[1]);
+      const p2 = new THREE.Vector3(mastBaseX+b[0], y2, b[1]);
+      const mid = p1.clone().add(p2).multiplyScalar(0.5);
+      const dir = p2.clone().sub(p1);
+      const diag = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,dir.length(),6), structMat);
+      diag.position.copy(mid);
+      diag.setRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize()));
+      scene.add(diag);
+    });
+  }
+}
+
+const boomYTop = 14.4, boomYBot = 13.6, boomStart = -15, boomEnd = 3;
+const topChord = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08, boomEnd-boomStart,8), structMat);
+topChord.rotation.z = Math.PI/2;
+topChord.position.set((boomStart+boomEnd)/2, boomYTop, 0);
+scene.add(topChord);
+const botChord = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08, boomEnd-boomStart,8), structMat);
+botChord.rotation.z = Math.PI/2;
+botChord.position.set((boomStart+boomEnd)/2, boomYBot, 0);
+scene.add(botChord);
+const boomSegs = Math.round((boomEnd-boomStart)/1.5);
+for(let i=0;i<=boomSegs;i++){
+  const x = boomStart + i*(boomEnd-boomStart)/boomSegs;
+  const vert = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035, boomYTop-boomYBot,6), structMat);
+  vert.position.set(x, (boomYTop+boomYBot)/2, 0);
+  scene.add(vert);
+  if(i<boomSegs){
+    const x2 = boomStart + (i+1)*(boomEnd-boomStart)/boomSegs;
+    const p1=new THREE.Vector3(x,boomYBot,0), p2=new THREE.Vector3(x2,boomYTop,0);
+    const mid=p1.clone().add(p2).multiplyScalar(0.5);
+    const dir=p2.clone().sub(p1);
+    const diag=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,dir.length(),6), structMat);
+    diag.position.copy(mid);
+    diag.setRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize()));
+    scene.add(diag);
+  }
+}
+
+const counterweight = new THREE.Mesh(new THREE.BoxGeometry(1.6,1.2,1.2), darkMat);
+counterweight.position.set(-14.2, boomYBot-0.8, 0);
+scene.add(counterweight);
+
+const cab = new THREE.Mesh(new THREE.BoxGeometry(1.0,0.9,1.0), darkMat);
+cab.position.set(-13, mastTop-0.6, 0.9);
+scene.add(cab);
+
+const apex = new THREE.Mesh(new THREE.ConeGeometry(0.25,2.2,4), structMat);
+apex.position.set(-13, mastTop+1.1, 0);
+scene.add(apex);
+function makeStay(x1,y1,z1,x2,y2,z2){
+  const p1=new THREE.Vector3(x1,y1,z1), p2=new THREE.Vector3(x2,y2,z2);
+  const mid=p1.clone().add(p2).multiplyScalar(0.5);
+  const dir=p2.clone().sub(p1);
+  const stay=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,dir.length(),6), darkMat);
+  stay.position.copy(mid);
+  stay.setRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize()));
+  scene.add(stay);
+}
+makeStay(-13, mastTop+2.2, 0, boomEnd-2, boomYTop, 0);
+makeStay(-13, mastTop+2.2, 0, boomStart+1, boomYTop, 0);
+
+const hoistPost = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05, boomYBot-pivotY, 8), darkMat);
+hoistPost.position.set(pivotX, (boomYBot+pivotY)/2, pivotZ);
+scene.add(hoistPost);
+
+const ballRadius = 0.78;
+const ballMat = new THREE.MeshStandardMaterial({color:0x5f5e5a});
+const ball = new THREE.Mesh(new THREE.SphereGeometry(ballRadius,28,18), ballMat);
+scene.add(ball);
+
+function makeLabelSprite(text){
+  const cnv = document.createElement('canvas'); cnv.width=140; cnv.height=70;
+  const ctx = cnv.getContext('2d');
+  ctx.fillStyle='#f1efe8'; ctx.font='bold 30px Arial';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text,70,35);
+  const tex = new THREE.CanvasTexture(cnv);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false});
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(1.7,0.85,1);
+  sprite.renderOrder = 10;
+  return sprite;
+}
+const label = makeLabelSprite('250 kg');
+ball.add(label);
+
+const cableMat = new THREE.MeshStandardMaterial({color:0x2c2c2a});
+const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,1,8), cableMat);
+scene.add(cable);
+const pivotVec = new THREE.Vector3(pivotX,pivotY,pivotZ);
+function updateBall3D(x,y,z){
+  ball.position.set(x,y,z);
+  const ballVec = new THREE.Vector3(x,y,z);
+  const dir = new THREE.Vector3().subVectors(ballVec,pivotVec);
+  const len = dir.length();
+  cable.position.copy(pivotVec.clone().add(ballVec).multiplyScalar(0.5));
+  cable.scale.set(1,len,1);
+  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  cable.setRotationFromQuaternion(quat);
+}
+
+const wallGroup = new THREE.Group();
+const brickColors = [0xf0997b, 0xe8886a, 0xf3a688];
+const brickMats = brickColors.map(c=>new THREE.MeshStandardMaterial({color:c}));
+const bw=0.85, bh=0.55, bd=1.6, wallX0=1.0, wallY0=0.28, cols=4, rows=5;
+for(let ix=0; ix<cols; ix++){
+  for(let iy=0; iy<rows; iy++){
+    const mat = brickMats[(ix+iy)%brickMats.length];
+    const brick = new THREE.Mesh(new THREE.BoxGeometry(bw,bh,bd), mat);
+    brick.position.set(wallX0+ix*bw+bw/2, wallY0+iy*bh+bh/2, 0);
+    wallGroup.add(brick);
+  }
+}
+const baseSlab = new THREE.Mesh(new THREE.BoxGeometry(cols*bw+0.3, 0.28, bd+0.3), new THREE.MeshStandardMaterial({color:0x8a877e}));
+baseSlab.position.set(wallX0+cols*bw/2, 0.14, 0);
+wallGroup.add(baseSlab);
+const capSlab = new THREE.Mesh(new THREE.BoxGeometry(cols*bw+0.3, 0.22, bd+0.3), new THREE.MeshStandardMaterial({color:0x6f6c63}));
+capSlab.position.set(wallX0+cols*bw/2, wallY0+rows*bh+0.11, 0);
+wallGroup.add(capSlab);
+wallGroup.visible = false;
+scene.add(wallGroup);
+const wallBaseX = wallGroup.position.x;
+
+const propMat1 = new THREE.MeshStandardMaterial({color:0xd6541f});
+const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,1.0,16), propMat1);
+barrel.position.set(-9,0.5,3.2);
+scene.add(barrel);
+
+const coneMat = new THREE.MeshStandardMaterial({color:0xe8792b});
+[[2.6,-3.2],[3.4,3.3],[-1.5,-4.2]].forEach(function(p){
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.35,0.8,16), coneMat);
+  cone.position.set(p[0],0.4,p[1]);
+  scene.add(cone);
+});
+
+function makeSignTexture(){
+  const cnv = document.createElement('canvas'); cnv.width=512; cnv.height=200;
+  const ctx = cnv.getContext('2d');
+  ctx.fillStyle = '#F2C230'; ctx.fillRect(0,0,512,200);
+  ctx.strokeStyle = '#2C2C2A'; ctx.lineWidth = 10; ctx.strokeRect(8,8,496,184);
+  ctx.fillStyle = '#2C2C2A'; ctx.font = 'bold 50px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('CANTEIRO DE OBRAS', 256, 100);
+  return new THREE.CanvasTexture(cnv);
+}
+const signMat = new THREE.MeshBasicMaterial({map: makeSignTexture()});
+const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2,1.6), signMat);
+sign.position.set(-9, 2.4, -5.5);
+sign.rotation.y = 0.5;
+scene.add(sign);
+const postMat = new THREE.MeshStandardMaterial({color:0x5f5e5a});
+const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,2.6,8), postMat);
+post1.position.set(-10.6, 1.3, -5.9);
+scene.add(post1);
+const post2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,2.6,8), postMat);
+post2.position.set(-7.4, 1.3, -5.1);
+scene.add(post2);
+
+const waveMat = new THREE.MeshBasicMaterial({color:0xEF9F27, transparent:true, opacity:0, wireframe:true});
+const waveMesh = new THREE.Mesh(new THREE.SphereGeometry(1,12,8), waveMat);
+scene.add(waveMesh);
+let waveActive = false, waveStart = 0;
+
+function makeTransparentLabel(initialText){
+  const cnv = document.createElement('canvas'); cnv.width=320; cnv.height=90;
+  const ctx = cnv.getContext('2d');
+  ctx.font='bold 34px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(44,44,42,0.85)';
+  ctx.fillText(initialText,160,45);
+  const tex = new THREE.CanvasTexture(cnv);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false});
+  const spr = new THREE.Sprite(mat);
+  spr.scale.set(3.4,0.95,1);
+  spr.renderOrder = 20;
+  spr.userData.canvas = cnv; spr.userData.ctx = ctx; spr.userData.tex = tex;
+  return spr;
+}
+function setLabelText(sprite, text){
+  const ctx = sprite.userData.ctx, cnv = sprite.userData.canvas;
+  ctx.clearRect(0,0,cnv.width,cnv.height);
+  ctx.font='bold 34px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(44,44,42,0.85)';
+  ctx.fillText(text,160,45);
+  sprite.userData.tex.needsUpdate = true;
+}
+const heightSprite = makeTransparentLabel('Altura: 10.0 m');
+heightSprite.visible = false;
+scene.add(heightSprite);
+
+const NAT = { angleY:0.55, angleX:0.2, dist:30, target:new THREE.Vector3(-4,8,0) };
+let camAngleY = NAT.angleY, camAngleX = NAT.angleX, camDist = NAT.dist;
+const camTarget = NAT.target.clone();
+function updateCamera(){
+  camera.position.x = camTarget.x + camDist*Math.sin(camAngleY)*Math.cos(camAngleX);
+  camera.position.y = camTarget.y + camDist*Math.sin(camAngleX);
+  camera.position.z = camTarget.z + camDist*Math.cos(camAngleY)*Math.cos(camAngleX);
+  camera.lookAt(camTarget);
+}
+updateCamera();
+let dragging=false,lastX=0,lastY=0;
+canvas.addEventListener('pointerdown', e=>{ dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.style.cursor='grabbing';});
+window.addEventListener('pointerup', ()=>{dragging=false;canvas.style.cursor='grab';});
+window.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  camAngleY -= (e.clientX-lastX)*0.008;
+  camAngleX = Math.max(-1.1, Math.min(1.1, camAngleX + (e.clientY-lastY)*0.008));
+  lastX=e.clientX; lastY=e.clientY;
+  updateCamera();
+});
+window.addEventListener('resize', ()=>{
+  camera.aspect = container.clientWidth/container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+function ballPos(theta){
+  return { x: pivotX + L*Math.sin(theta), y: pivotY - L*Math.cos(theta), z: 0 };
+}
+const closeTarget = new THREE.Vector3(ballPos(-Math.PI/2).x, ballPos(-Math.PI/2).y, 0);
+const CLOSE_DIST = 3.9;
+
+function setTab(i){
+  tab = i; t0 = performance.now(); collisionPhase = 0;
+  [0,1,2,3,4].forEach(k=>document.getElementById('tabBtn'+k).classList.toggle('active', k===i));
+  document.getElementById('layoutMain').style.display = i===3 ? 'none' : 'flex';
+  document.getElementById('formulasPanel').style.display = i===3 ? 'block' : 'none';
+  wallGroup.visible = (i===2 || i===4);
+  wallGroup.position.x = wallBaseX;
+  waveMat.opacity = 0;
+  heightSprite.visible = i===4;
+  document.getElementById('impactBreakdown').style.opacity = '0';
+  document.getElementById('cardEp').style.display = 'block';
+  document.getElementById('cardEc').style.display = 'block';
+  document.getElementById('epVal').style.display = i===0 ? 'none' : 'block';
+  document.getElementById('ecVal').style.display = i===0 ? 'none' : 'block';
+  document.getElementById('epBarWrap').style.display = i===0 ? 'block' : 'none';
+  document.getElementById('ecBarWrap').style.display = i===0 ? 'block' : 'none';
+  document.getElementById('emBarWrap').style.display = i===1 ? 'block' : 'none';
+  document.getElementById('hint').style.display = 'block';
+  if(i!==4){ camAngleY=NAT.angleY; camAngleX=NAT.angleX; camDist=NAT.dist; camTarget.copy(NAT.target); updateCamera(); }
+  if(i===3){
+    document.getElementById('noteText').textContent = 'Todos os cálculos partem da conservação de energia mecânica (sem resistência do ar): a energia não se cria nem se perde, apenas muda de forma.';
+    return;
+  }
+  const notes = [
+    'Sem resistência do ar, a energia mecânica (Em = Ep + Ec) permanece constante durante toda a oscilação.',
+    'Com resistência, a energia mecânica se dissipa lentamente a cada oscilação. O pêndulo perde amplitude aos poucos até parar.',
+    'A bola cai do ponto mais alto (h = 10 m, Ec = 0) até o momento do impacto, onde toda a energia potencial virou cinética.',
+    'Close na bola parada no alto, depois a câmera acompanha a queda se afastando aos poucos, parando um pouco antes do muro (câmera fixa nesta cena).'
+  ];
+  document.getElementById('noteText').textContent = notes[i];
+}
+function togglePlay(){
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? 'Pausar' : 'Continuar';
+}
+function resetSim(){ t0 = performance.now(); collisionPhase = 0; }
+
+function updateReadouts(Ep, Ec, Em, v){
+  document.getElementById('epVal').textContent = Math.round(Ep).toLocaleString('pt-BR') + ' J';
+  document.getElementById('ecVal').textContent = Math.round(Ec).toLocaleString('pt-BR') + ' J';
+  document.getElementById('emVal').textContent = Math.round(Em).toLocaleString('pt-BR') + ' J';
+  document.getElementById('vVal').textContent = v.toFixed(1) + ' m/s';
+  const epPct = Math.max(0, Math.min(100, Ep/25000*100));
+  const ecPct = Math.max(0, Math.min(100, Ec/25000*100));
+  const emPct = Math.max(0, Math.min(100, Em/25000*100));
+  document.getElementById('epBarFill').style.width = epPct + '%';
+  document.getElementById('ecBarFill').style.width = ecPct + '%';
+  document.getElementById('emBarFill').style.width = emPct + '%';
+  document.getElementById('epPct').textContent = Math.round(epPct) + '% de 25000 J';
+  document.getElementById('ecPct').textContent = Math.round(ecPct) + '% de 25000 J';
+  document.getElementById('emPct').textContent = Math.round(emPct) + '% de 25000 J';
+}
+
+function frame(now){
+  requestAnimationFrame(frame);
+  const t = (now - t0)/1000;
+  if(playing && tab !== 3){
+    if(tab === 0){
+      const theta = (Math.PI/2) * Math.cos(1.0*t);
+      const h = L*(1-Math.cos(theta));
+      const Ep = m*g*h, Ec = Math.max(0, EmTotal-Ep), v = Math.sqrt(2*Ec/m);
+      const p = ballPos(theta); updateBall3D(p.x,p.y,p.z);
+      updateReadouts(Ep, Ec, EmTotal, v);
+    } else if(tab === 1){
+      const decay = Math.exp(-0.05*t);
+      if(decay < 0.03){ t0 = now; }
+      const theta = (Math.PI/2)*decay*Math.cos(1.0*t);
+      const EpReal = m*g*L*(1-Math.cos(theta));
+      const EmCurrent = EmTotal*decay*decay;
+      const EcCalc = Math.max(0, EmCurrent - EpReal);
+      const vReal = Math.sqrt(2*EcCalc/m);
+      const p = ballPos(theta); updateBall3D(p.x,p.y,p.z);
+      updateReadouts(EpReal, EcCalc, EmCurrent, vReal);
+    } else if(tab === 2){
+      const T = 2.0;
+      if(collisionPhase === 0){
+        const prog = Math.min(1, t/T);
+        const eased = 1-(1-prog)*(1-prog);
+        const theta = -(Math.PI/2)*(1-eased);
+        const h = L*(1-Math.cos(theta));
+        const Ep = m*g*h, Ec = Math.max(0, EmTotal-Ep), v = Math.sqrt(2*Ec/m);
+        const p = ballPos(theta); updateBall3D(p.x,p.y,p.z);
+        updateReadouts(Ep, Ec, EmTotal, v);
+        if(prog >= 1){
+          collisionPhase = 1; t0 = now;
+          waveMat.opacity = 0.9; waveActive = true; waveStart = now;
+          waveMesh.scale.set(0.3,0.3,0.3);
+          waveMesh.position.set(0, pivotY-L, 0);
+          document.getElementById('impactBreakdown').style.opacity = '1';
+          document.getElementById('cardEp').style.display = 'none';
+          document.getElementById('cardEc').style.display = 'none';
+          const vImp = Math.sqrt(2*EmTotal/m);
+          document.getElementById('noteText').textContent =
+            'Colisão! v = ' + vImp.toFixed(1) + ' m/s, Ec = ' + Math.round(EmTotal).toLocaleString('pt-BR') +
+            ' J. 80% vai para o muro e os 20% restantes se dispersam em outras formas: som, calor e deformação.';
+        }
+      } else if(collisionPhase === 1){
+        const p = ballPos(0); updateBall3D(p.x,p.y,p.z);
+        updateReadouts(0, EmTotal, EmTotal, Math.sqrt(2*EmTotal/m));
+        const elapsed = (now-t0)/1000;
+        if(elapsed < 0.4){ wallGroup.position.x = wallBaseX + Math.sin(elapsed*40)*0.06; }
+        else { wallGroup.position.x = wallBaseX; }
+        if(waveActive){
+          const we = (now-waveStart)/1000;
+          if(we < 1.0){ const s = 0.3+we*3; waveMesh.scale.set(s,s,s); waveMat.opacity = 0.9*(1-we); }
+          else { waveMat.opacity = 0; waveActive = false; }
+        }
+        if((now-t0) > 2800){ collisionPhase = 2; t0 = now; }
+      } else {
+        if((now-t0) > 800){ setTab(2); }
+      }
+    } else if(tab === 4){
+      const holdT = 1.0, fallT = 5.0;
+      let prog;
+      if(t <= holdT){ prog = 0; }
+      else { prog = Math.min(0.94, (t-holdT)/fallT); }
+      const eased = 1-(1-prog)*(1-prog);
+      const theta = -(Math.PI/2)*(1-eased);
+      const h = L*(1-Math.cos(theta));
+      const Ep = m*g*h, Ec = Math.max(0, EmTotal-Ep), v = Math.sqrt(2*Ec/m);
+      const p = ballPos(theta); updateBall3D(p.x,p.y,p.z);
+      updateReadouts(Ep, Ec, EmTotal, v);
+
+      setLabelText(heightSprite, 'Altura: ' + p.y.toFixed(1) + ' m');
+      heightSprite.position.set(p.x, p.y - ballRadius - 0.7, p.z + 0.3);
+
+      const camProg = t <= holdT ? 0 : Math.min(1, (t-holdT)/fallT);
+      const dist = CLOSE_DIST + (NAT.dist - CLOSE_DIST)*camProg;
+      const tgt = new THREE.Vector3().lerpVectors(closeTarget, NAT.target, camProg);
+      camera.position.x = tgt.x + dist*Math.sin(camAngleY)*Math.cos(camAngleX);
+      camera.position.y = tgt.y + dist*Math.sin(camAngleX);
+      camera.position.z = tgt.z + dist*Math.cos(camAngleY)*Math.cos(camAngleX);
+      camera.lookAt(tgt);
+    }
+  }
+  renderer.render(scene, camera);
+}
+setTab(0);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

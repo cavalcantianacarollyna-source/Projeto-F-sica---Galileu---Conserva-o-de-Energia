@@ -87,6 +87,8 @@ O roteiro organiza as cenas, falas, narrações, cálculos, recursos visuais e t
 
 
 Vídeo
+Gravação presencial (Material para Edição) : https://drive.google.com/drive/folders/1-iFQpBe2-DHkT2xHxp9s2Gvwv3N1dcen
+Vídeos gravados durante o projeto que serão selecionados e combinados com a parte programada, recursos de inteligência artificial e outros materiais para compor o vídeo final.
 Título: Para Onde Vai a Energia? | Conservação de Energia - Galilei
 [INSERIR AQUI O LINK DO VÍDEO QUANDO ELE ESTIVER PUBLICADO]
 Descrição: Neste vídeo, buscamos explicar de forma visual como a energia potencial gravitacional se transforma em energia cinética, por que a energia mecânica é conservada em um modelo ideal e o que acontece quando entram em cena o atrito e outras forças não conservativas.
